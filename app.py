@@ -4,6 +4,7 @@ from liar_game import LiarGame
 import random
 from ai_utils_bert import compute_secret_embeddings
 import time
+import threading
 
 # Streamlit 페이지 설정
 st.set_page_config(page_title="라이어 게임", page_icon="🎭")
@@ -108,10 +109,17 @@ elif st.session_state.game_phase == 'role_reveal':
     st.write(f"### 라운드 {game.current_round}")
     display_game_info()
     
-    # 라이어가 인간인 경우 예측 단어 초기화
+    # 라이어가 인간인 경우 예측 단어 표시
     human_player = next(p for p in game.players if p.is_human)
-    if human_player.is_liar:
-        st.session_state.ai_predicted_words = None
+    if human_player.is_liar and st.session_state.ai_predicted_words is None:
+        aggregated_comments = " ".join(st.session_state.descriptions.values())
+        st.session_state.ai_predicted_words = game.predict_secret_word_from_comments(aggregated_comments)
+        
+        # 메인 화면에 예측 단어 표시
+        if st.session_state.ai_predicted_words:
+            processed_words = process_predicted_words(st.session_state.ai_predicted_words)
+            st.write("### 시스템 예측 단어들")
+            st.write(", ".join(processed_words))
     
     if st.button("설명 단계로"):
         st.session_state.game_phase = 'explanation'
@@ -126,6 +134,13 @@ elif st.session_state.game_phase == 'explanation':
     st.write("### 설명 단계")
     st.write("각 플레이어는 제시어에 대해 한 문장씩 설명해주세요.")
     
+    # 라이어가 인간인 경우 예측 단어 표시
+    human_player = next(p for p in game.players if p.is_human)
+    if human_player.is_liar and st.session_state.ai_predicted_words is not None:
+        processed_words = process_predicted_words(st.session_state.ai_predicted_words)
+        st.write("### 시스템 예측 단어들")
+        st.write(", ".join(processed_words))
+    
     # 현재까지의 설명들 표시
     if st.session_state.descriptions:
         st.write("\n### 지금까지의 설명:")
@@ -136,17 +151,6 @@ elif st.session_state.game_phase == 'explanation':
     st.write(f"\n### {current_player.name}의 차례")
     
     if current_player.is_human:
-        # 라이어인 경우, 이전 설명들이 있다면 예측 단어 생성
-        if current_player.is_liar and st.session_state.descriptions and st.session_state.ai_predicted_words is None:
-            aggregated_comments = " ".join(st.session_state.descriptions.values())
-            st.session_state.ai_predicted_words = game.predict_secret_word_from_comments(aggregated_comments)
-            
-            # 메인 화면에 예측 단어 표시
-            if st.session_state.ai_predicted_words:
-                processed_words = process_predicted_words(st.session_state.ai_predicted_words)
-                st.write("### 시스템 예측 단어들")
-                st.write(", ".join(processed_words))
-
         if current_player.name not in st.session_state.descriptions:
             # 타이머 설정
             if st.session_state.start_time is None:
@@ -157,10 +161,11 @@ elif st.session_state.game_phase == 'explanation':
             remaining_time = max(0, 60 - int(elapsed_time))
             
             # 실시간 타이머 표시
-            st.write(f"남은 시간: {remaining_time}초")
+            timer_placeholder = st.empty()
+            timer_placeholder.write(f"남은 시간: {remaining_time}초")
             
             # 60초 제한 타이머
-            if remaining_time > 0:
+            if remaining_time > 0 and not st.session_state.time_over:
                 explanation = st.text_input("당신의 설명을 입력하세요", max_chars=100)
                 if st.button("설명 제출"):
                     if explanation.strip():
@@ -170,29 +175,50 @@ elif st.session_state.game_phase == 'explanation':
                         if st.session_state.current_player_idx >= len(game.players):
                             st.session_state.game_phase = 'voting'
                         st.rerun()
-            else:
-                # 시간 초과 시 다른 플레이어들에게 1점 부여하고 다음 라운드로 진행
+            
+            # 실시간 타이머 업데이트
+            while remaining_time > 0 and not st.session_state.time_over:
+                time.sleep(1)
+                elapsed_time = time.time() - st.session_state.start_time
+                remaining_time = max(0, 60 - int(elapsed_time))
+                timer_placeholder.write(f"남은 시간: {remaining_time}초")
+                
+                if remaining_time == 0:
+                    st.session_state.time_over = True
+                    st.experimental_rerun()
+            
+            # 시간 초과 처리
+            if st.session_state.time_over:
                 st.error("시간이 초과되었습니다!")
-                
-                # 라이어를 제외한 모든 플레이어에게 1점 부여
-                for player in game.players:
-                    if not player.is_liar:
-                        player.score += 1
-                
-                # 다음 라운드로 진행
-                st.session_state.game_phase = 'role_reveal'
-                st.session_state.round_data_initialized = False
-                st.session_state.descriptions = {}
-                st.session_state.current_player_idx = 0
-                st.session_state.start_time = None
-                
-                # 라운드 증가
-                game.current_round += 1
-                
-                # 게임 종료 확인
-                if game.current_round > game.total_rounds:
-                    st.session_state.game_phase = 'game_over'
-                
+                # 라이어로 지목되도록 처리
+                st.session_state.votes = {player.name: 0 for player in game.players}
+                st.session_state.votes[current_player.name] = len(game.players)
+                st.session_state.game_phase = 'voting'
+                st.rerun()
+    else:
+        if current_player.name not in st.session_state.descriptions:
+            aggregated_comments = " ".join(st.session_state.descriptions.values())
+            if current_player.is_liar:
+                explanation, _ = game.generate_ai_liar_description(aggregated_comments)
+            else:
+                explanation = game.generate_ai_truth_description(st.session_state.secret_word)
+            st.session_state.descriptions[current_player.name] = explanation
+            
+        st.write(f"AI의 설명: {st.session_state.descriptions[current_player.name]}")
+        if st.button("다음 플레이어"):
+            st.session_state.current_player_idx += 1
+            if st.session_state.current_player_idx >= len(game.players):
+                st.session_state.game_phase = 'voting'
+            st.rerun()
+
+    if current_player.is_human:
+        if current_player.name not in st.session_state.descriptions:
+            explanation = st.text_input("당신의 설명을 입력하세요")
+            if st.button("설명 제출"):
+                st.session_state.descriptions[current_player.name] = explanation
+                st.session_state.current_player_idx += 1
+                if st.session_state.current_player_idx >= len(game.players):
+                    st.session_state.game_phase = 'voting'
                 st.rerun()
     else:
         if current_player.name not in st.session_state.descriptions:
@@ -221,6 +247,15 @@ elif st.session_state.game_phase == 'voting':
         st.write(f"{name}: {desc}")
     
     human_player = next(p for p in game.players if p.is_human)
+    if human_player.is_liar and st.session_state.human_liar_secret_guess is None:
+        st.write("### 라이어 비밀 단어 추측 단계")
+        st.write(f"[이전에 예측된 단어]: {st.session_state.human_liar_predicted_words}")
+        st.write("당신의 추측 단어를 입력하세요:")
+        human_liar_guess = st.text_input("비밀 단어 추측:")
+        if st.button("추측 제출"):
+            st.session_state.human_liar_secret_guess = human_liar_guess
+            st.rerun()
+    
     if human_player.name not in st.session_state.votes:
         vote_options = [p.name for p in game.players if p != human_player]
         human_vote = st.selectbox("라이어라고 생각하는 플레이어를 선택하세요", vote_options)
@@ -257,34 +292,34 @@ elif st.session_state.game_phase == 'result':
         highest_votes = max(vote_counts.values())
         top_candidates = [name for name, cnt in vote_counts.items() if cnt == highest_votes]
         
+        human_player = next(p for p in game.players if p.is_human)
+        
         if game.liar.name in top_candidates:
             for player in game.players:
                 if not player.is_liar:
                     player.score += 1
-            if game.liar.is_human:
-                st.write("당신이 라이어입니다! 제시어를 맞춰보세요:")
-                # 추측 단어 입력 추가
-                liar_guess = st.text_input("당신이 생각하는 제시어는?")
-                if st.button("제출"):
-                    if liar_guess.lower() == st.session_state.secret_word.lower():
-                        game.liar.score += 3
-                        st.write("정답입니다! 승리하셨습니다! 3점을 획득하셨습니다!")
-                        st.session_state.points_calculated = True
-                    else:
-                        st.write("틀렸습니다. 패배하셨습니다.")
-                        st.session_state.points_calculated = True
+            
+            # 라이어가 사용자일 경우 특별한 처리
+            if human_player.is_liar:
+                # 사용자의 비밀 단어 추측 확인
+                if st.session_state.human_liar_secret_guess and st.session_state.human_liar_secret_guess.lower() == st.session_state.secret_word.lower():
+                    human_player.score += 3
+                    st.write("축하합니다! 비밀 단어를 맞추어 3점을 획득하셨습니다!")
+                else:
+                    st.write(f"비밀 단어를 맞추지 못했습니다. 정답은 '{st.session_state.secret_word}'였습니다.")
             else:
+                # AI 라이어의 추측
                 liar_guess = game.liar_guess_secret()
                 if liar_guess.lower() == st.session_state.secret_word.lower():
                     game.liar.score += 3
                     st.write(f"{game.liar.name}이(가) 제시어를 맞추어 3점을 획득했습니다!")
                 else:
                     st.write(f"{game.liar.name}이(가) 제시어를 맞추지 못했습니다.")
-                st.session_state.points_calculated = True
         else:
             game.liar.score += 1
             st.write(f"라이어가 지목되지 않아 {game.liar.name}이(가) 1점을 획득했습니다!")
-            st.session_state.points_calculated = True
+        
+        st.session_state.points_calculated = True
     
     if st.button("다음 라운드"):
         # 라운드 관련 상태 초기화
@@ -293,6 +328,8 @@ elif st.session_state.game_phase == 'result':
         st.session_state.votes = {}
         st.session_state.current_player_idx = 0
         st.session_state.round_data_initialized = False
+        st.session_state.human_liar_predicted_words = None
+        st.session_state.human_liar_secret_guess = None
         if 'points_calculated' in st.session_state:
             del st.session_state.points_calculated
         
