@@ -4,9 +4,16 @@ from liar_game import LiarGame
 import random
 from ai_utils_bert import compute_secret_embeddings
 import time
+import threading
 
 # Streamlit 페이지 설정
 st.set_page_config(page_title="라이어 게임", page_icon="🎭")
+
+# 예측된 단어들 처리 함수
+def process_predicted_words(predicted_dict):
+    # tensor 제거하고 단어만 추출
+    processed_words = list(predicted_dict.keys())[:5]
+    return processed_words
 
 # 게임 정보 표시 함수 정의
 def display_game_info():
@@ -26,16 +33,6 @@ def display_game_info():
             for player in game.players:
                 st.write(f"{player.name}: {player.score}점")
 
-# 예측된 단어들 처리 함수
-def process_predicted_words(predicted_dict):
-    # tensor 제거하고 단어만 추출
-    processed_words = {}
-    for word, score in predicted_dict.items():
-        # score가 tensor인 경우 float으로 변환
-        processed_score = float(score) if hasattr(score, 'item') else score
-        processed_words[word] = processed_score
-    return dict(sorted(processed_words.items(), key=lambda x: x[1], reverse=True))
-
 # 세션 상태 초기화
 if 'initialized' not in st.session_state:
     st.session_state.game = None
@@ -48,8 +45,9 @@ if 'initialized' not in st.session_state:
     st.session_state.votes = {}
     st.session_state.round_data_initialized = False
     st.session_state.initialized = True
-    st.session_state.ai_predicted_words = None  # 새로 추가된 상태
-    st.session_state.start_time = None  # 타이머 시작 시간
+    st.session_state.ai_predicted_words = None
+    st.session_state.start_time = None
+    st.session_state.time_over = False
 
 st.title("라이어 게임에 오신 것을 환영합니다!")
 
@@ -105,6 +103,7 @@ elif st.session_state.game_phase == 'role_reveal':
             st.session_state.ai_predicted_words = None
         
         st.session_state.round_data_initialized = True
+        st.session_state.time_over = False
     
     # 정보 표시
     st.write(f"### 라운드 {game.current_round}")
@@ -120,8 +119,7 @@ elif st.session_state.game_phase == 'role_reveal':
         if st.session_state.ai_predicted_words:
             processed_words = process_predicted_words(st.session_state.ai_predicted_words)
             st.write("### 시스템 예측 단어들")
-            for word, score in list(processed_words.items())[:5]:
-                st.write(f"{word}: {score:.4f}")
+            st.write(", ".join(processed_words))
     
     if st.button("설명 단계로"):
         st.session_state.game_phase = 'explanation'
@@ -141,8 +139,7 @@ elif st.session_state.game_phase == 'explanation':
     if human_player.is_liar and st.session_state.ai_predicted_words is not None:
         processed_words = process_predicted_words(st.session_state.ai_predicted_words)
         st.write("### 시스템 예측 단어들")
-        for word, score in list(processed_words.items())[:5]:
-            st.write(f"{word}: {score:.4f}")
+        st.write(", ".join(processed_words))
     
     # 현재까지의 설명들 표시
     if st.session_state.descriptions:
@@ -163,10 +160,12 @@ elif st.session_state.game_phase == 'explanation':
             elapsed_time = time.time() - st.session_state.start_time
             remaining_time = max(0, 60 - int(elapsed_time))
             
-            st.write(f"남은 시간: {remaining_time}초")
+            # 실시간 타이머 표시
+            timer_placeholder = st.empty()
+            timer_placeholder.write(f"남은 시간: {remaining_time}초")
             
             # 60초 제한 타이머
-            if remaining_time > 0:
+            if remaining_time > 0 and not st.session_state.time_over:
                 explanation = st.text_input("당신의 설명을 입력하세요", max_chars=100)
                 if st.button("설명 제출"):
                     if explanation.strip():
@@ -176,14 +175,25 @@ elif st.session_state.game_phase == 'explanation':
                         if st.session_state.current_player_idx >= len(game.players):
                             st.session_state.game_phase = 'voting'
                         st.rerun()
-            else:
+            
+            # 실시간 타이머 업데이트
+            while remaining_time > 0 and not st.session_state.time_over:
+                time.sleep(1)
+                elapsed_time = time.time() - st.session_state.start_time
+                remaining_time = max(0, 60 - int(elapsed_time))
+                timer_placeholder.write(f"남은 시간: {remaining_time}초")
+                
+                if remaining_time == 0:
+                    st.session_state.time_over = True
+                    st.experimental_rerun()
+            
+            # 시간 초과 처리
+            if st.session_state.time_over:
                 st.error("시간이 초과되었습니다!")
-                explanation = "시간 초과"
-                st.session_state.descriptions[current_player.name] = explanation
-                st.session_state.current_player_idx += 1
-                st.session_state.start_time = None  # 타이머 초기화
-                if st.session_state.current_player_idx >= len(game.players):
-                    st.session_state.game_phase = 'voting'
+                # 라이어로 지목되도록 처리
+                st.session_state.votes = {player.name: 0 for player in game.players}
+                st.session_state.votes[current_player.name] = len(game.players)
+                st.session_state.game_phase = 'voting'
                 st.rerun()
     else:
         if current_player.name not in st.session_state.descriptions:
