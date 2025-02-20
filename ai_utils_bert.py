@@ -9,7 +9,14 @@ import streamlit as st
 
 
 # OpenAI API 키 설정 (본인의 API 키로 대체하세요)
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+openai.api_key = st.text_input("OpenAI API 키를 입력하세요", type="password")
+
+if api_key:
+    openai.api_key = api_key
+    # API 호출 로직 (채팅, 생성 등)
+else:
+    st.warning("API 키를 입력해주세요. OpenAI 웹사이트에서 발급 가능합니다.")
+    
 
 def download_models():
     # 모델을 저장할 디렉토리 생성
