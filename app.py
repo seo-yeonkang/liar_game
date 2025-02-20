@@ -4,7 +4,6 @@ from liar_game import LiarGame
 import random
 from ai_utils_bert import compute_secret_embeddings
 import time
-import threading
 
 # Streamlit 페이지 설정
 st.set_page_config(page_title="라이어 게임", page_icon="🎭")
@@ -161,11 +160,10 @@ elif st.session_state.game_phase == 'explanation':
             remaining_time = max(0, 60 - int(elapsed_time))
             
             # 실시간 타이머 표시
-            timer_placeholder = st.empty()
-            timer_placeholder.write(f"남은 시간: {remaining_time}초")
+            st.write(f"남은 시간: {remaining_time}초")
             
             # 60초 제한 타이머
-            if remaining_time > 0 and not st.session_state.time_over:
+            if remaining_time > 0:
                 explanation = st.text_input("당신의 설명을 입력하세요", max_chars=100)
                 if st.button("설명 제출"):
                     if explanation.strip():
@@ -175,25 +173,29 @@ elif st.session_state.game_phase == 'explanation':
                         if st.session_state.current_player_idx >= len(game.players):
                             st.session_state.game_phase = 'voting'
                         st.rerun()
-            
-            # 실시간 타이머 업데이트
-            while remaining_time > 0 and not st.session_state.time_over:
-                time.sleep(1)
-                elapsed_time = time.time() - st.session_state.start_time
-                remaining_time = max(0, 60 - int(elapsed_time))
-                timer_placeholder.write(f"남은 시간: {remaining_time}초")
-                
-                if remaining_time == 0:
-                    st.session_state.time_over = True
-                    st.experimental_rerun()
-            
-            # 시간 초과 처리
-            if st.session_state.time_over:
+            else:
+                # 시간 초과 시 다른 플레이어들에게 1점 부여하고 다음 라운드로 진행
                 st.error("시간이 초과되었습니다!")
-                # 라이어로 지목되도록 처리
-                st.session_state.votes = {player.name: 0 for player in game.players}
-                st.session_state.votes[current_player.name] = len(game.players)
-                st.session_state.game_phase = 'voting'
+                
+                # 라이어를 제외한 모든 플레이어에게 1점 부여
+                for player in game.players:
+                    if not player.is_liar:
+                        player.score += 1
+                
+                # 다음 라운드로 진행
+                st.session_state.game_phase = 'role_reveal'
+                st.session_state.round_data_initialized = False
+                st.session_state.descriptions = {}
+                st.session_state.current_player_idx = 0
+                st.session_state.start_time = None
+                
+                # 라운드 증가
+                game.current_round += 1
+                
+                # 게임 종료 확인
+                if game.current_round > game.total_rounds:
+                    st.session_state.game_phase = 'game_over'
+                
                 st.rerun()
     else:
         if current_player.name not in st.session_state.descriptions:
@@ -211,27 +213,76 @@ elif st.session_state.game_phase == 'explanation':
                 st.session_state.game_phase = 'voting'
             st.rerun()
 
-# 나머지 코드는 이전과 동일하게 유지 (투표, 결과, 게임 종료 단계)
-# ... (이전 코드와 동일)
-
-# 마지막 부분에 다음 코드 추가
-elif st.session_state.game_phase == 'game_over':
+# 투표 단계
+elif st.session_state.game_phase == 'voting':
     game = st.session_state.game
+    display_game_info()
     
-    st.write("### 게임 종료!")
-    st.write("\n### 최종 점수:")
-    for player in game.players:
-        st.write(f"{player.name}: {player.score}점")
+    st.write("### 투표 단계")
+    st.write("모든 설명:")
+    for name, desc in st.session_state.descriptions.items():
+        st.write(f"{name}: {desc}")
     
-    # 승자 결정
-    max_score = max(player.score for player in game.players)
-    winners = [player.name for player in game.players if player.score == max_score]
-    if len(winners) == 1:
-        st.write(f"\n최종 승자: {winners[0]}!")
-    else:
-        st.write(f"\n최종 승자: {', '.join(winners)} (공동 승자)!")
+    human_player = next(p for p in game.players if p.is_human)
+    if human_player.name not in st.session_state.votes:
+        vote_options = [p.name for p in game.players if p != human_player]
+        human_vote = st.selectbox("라이어라고 생각하는 플레이어를 선택하세요", vote_options)
+        if st.button("투표"):
+            st.session_state.votes[human_player.name] = human_vote
+            # AI 플레이어들의 투표
+            for player in game.players:
+                if not player.is_human:
+                    vote = game.generate_ai_vote(player, st.session_state.descriptions)
+                    st.session_state.votes[player.name] = vote
+            st.session_state.game_phase = 'result'
+            st.rerun()
+
+# 결과 단계
+elif st.session_state.game_phase == 'result':
+    game = st.session_state.game
+    display_game_info()
     
-    if st.button("새 게임 시작"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    st.write("### 투표 결과")
+    # 투표 결과 집계
+    vote_counts = {}
+    for vote in st.session_state.votes.values():
+        vote_counts[vote] = vote_counts.get(vote, 0) + 1
+    
+    for name, count in vote_counts.items():
+        st.write(f"{name}: {count}표")
+    
+    # 라이어 공개
+    st.write(f"\n실제 라이어는 {game.liar.name}입니다!")
+    st.write(f"제시어는 '{st.session_state.secret_word}'였습니다!")
+    
+    # 점수 계산
+    if 'points_calculated' not in st.session_state:
+        highest_votes = max(vote_counts.values())
+        top_candidates = [name for name, cnt in vote_counts.items() if cnt == highest_votes]
+        
+        if game.liar.name in top_candidates:
+            for player in game.players:
+                if not player.is_liar:
+                    player.score += 1
+            if game.liar.is_human:
+                st.write("당신이 라이어입니다! 제시어를 맞춰보세요:")
+                # 추측 단어 입력 추가
+                liar_guess = st.text_input("당신이 생각하는 제시어는?")
+                if st.button("제출"):
+                    if liar_guess.lower() == st.session_state.secret_word.lower():
+                        game.liar.score += 3
+                        st.write("정답입니다! 승리하셨습니다! 3점을 획득하셨습니다!")
+                        st.session_state.points_calculated = True
+                    else:
+                        st.write("틀렸습니다. 패배하셨습니다.")
+                        st.session_state.points_calculated = True
+            else:
+                liar_guess = game.liar_guess_secret()
+                if liar_guess.lower() == st.session_state.secret_word.lower():
+                    game.liar.score += 3
+                    st.write(f"{game.liar.name}이(가) 제시어를 맞추어 3점을 획득했습니다!")
+                else:
+                    st.write(f"{game.liar.name}이(가) 제시어를 맞추지 못했습니다.")
+                st.session_state.points_calculated = True
+        else:
+            game.
