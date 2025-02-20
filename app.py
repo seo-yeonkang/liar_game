@@ -285,4 +285,44 @@ elif st.session_state.game_phase == 'result':
                     st.write(f"{game.liar.name}이(가) 제시어를 맞추지 못했습니다.")
                 st.session_state.points_calculated = True
         else:
-            game.
+            game.liar.score += 1
+            st.write(f"라이어가 지목되지 않아 {game.liar.name}이(가) 1점을 획득했습니다!")
+            st.session_state.points_calculated = True
+    
+    if st.button("다음 라운드"):
+        # 라운드 관련 상태 초기화
+        game.current_round += 1
+        st.session_state.descriptions = {}
+        st.session_state.votes = {}
+        st.session_state.current_player_idx = 0
+        st.session_state.round_data_initialized = False
+        if 'points_calculated' in st.session_state:
+            del st.session_state.points_calculated
+        
+        if game.current_round <= game.total_rounds:
+            st.session_state.game_phase = 'role_reveal'
+        else:
+            st.session_state.game_phase = 'game_over'
+        st.rerun()
+
+# 게임 종료
+elif st.session_state.game_phase == 'game_over':
+    game = st.session_state.game
+    
+    st.write("### 게임 종료!")
+    st.write("\n### 최종 점수:")
+    for player in game.players:
+        st.write(f"{player.name}: {player.score}점")
+    
+    # 승자 결정
+    max_score = max(player.score for player in game.players)
+    winners = [player.name for player in game.players if player.score == max_score]
+    if len(winners) == 1:
+        st.write(f"\n최종 승자: {winners[0]}!")
+    else:
+        st.write(f"\n최종 승자: {', '.join(winners)} (공동 승자)!")
+    
+    if st.button("새 게임 시작"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
