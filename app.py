@@ -92,7 +92,7 @@ elif st.session_state.game_phase == 'role_reveal':
         human_player = next(p for p in game.players if p.is_human)
         if human_player.is_liar:
             # 다른 플레이어들의 설명이 없으므로 빈 문자열 전달
-            st.session_state.human_liar_predicted_words = game.predict_word_for_explanation("", chosen_topic)
+            st.session_state.human_liar_predicted_words = game.predict_secret_word_from_comments("", chosen_topic)
             st.write(f"[내부 참고용] 예측된 단어: {st.session_state.human_liar_predicted_words}")
         
         st.session_state.round_data_initialized = True
