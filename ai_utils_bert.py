@@ -5,10 +5,11 @@ from transformers import AutoTokenizer, AutoModel
 import torch
 import os
 import gdown
+import streamlit as st
 
 
 # OpenAI API 키 설정 (본인의 API 키로 대체하세요)
-openai.api_key = "API key"
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 def download_models():
     # 모델을 저장할 디렉토리 생성
