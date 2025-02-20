@@ -2,7 +2,7 @@ import streamlit as st
 from player import Player
 from liar_game import LiarGame
 import random
-from ai_utils_bert import compute_secret_embeddings
+from ai_utils_bert_copy import compute_secret_embeddings
 
 # Streamlit 페이지 설정
 st.set_page_config(page_title="라이어 게임", page_icon="🎭")
@@ -92,13 +92,8 @@ elif st.session_state.game_phase == 'role_reveal':
         human_player = next(p for p in game.players if p.is_human)
         if human_player.is_liar:
             # 다른 플레이어들의 설명이 없으므로 빈 문자열 전달
-            predicted_words = game.predict_word_for_explanation("", chosen_topic)
-            st.session_state.human_liar_predicted_words = predicted_words
-            
-            # 예측된 단어들을 더 명확하게 표시
-            st.write("### 내부 참고용 예측 단어들:")
-            for word, score in predicted_words.items():
-                st.write(f"- {word} (유사도: {score:.4f})")
+            st.session_state.human_liar_predicted_words = game.predict_word_for_explanation("", chosen_topic)
+            st.write(f"[내부 참고용] 예측된 단어: {st.session_state.human_liar_predicted_words}")
         
         st.session_state.round_data_initialized = True
     
