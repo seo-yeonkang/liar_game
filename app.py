@@ -3,6 +3,7 @@ from player import Player
 from liar_game import LiarGame
 import random
 from ai_utils_bert import compute_secret_embeddings
+import time
 
 # Streamlit 페이지 설정
 st.set_page_config(page_title="라이어 게임", page_icon="🎭")
@@ -11,32 +12,29 @@ st.set_page_config(page_title="라이어 게임", page_icon="🎭")
 def display_game_info():
     game = st.session_state.game
     if game and hasattr(game, 'chosen_topic'):
-        # 메인 화면에 게임 정보 표시
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write(f"### 라운드: {game.current_round}/{game.total_rounds}")
-            st.write(f"### 주제: {game.chosen_topic}")
-        
-        with col2:
-            st.write("### 플레이어 점수")
+        with st.sidebar:
+            st.write("### 게임 정보")
+            st.write(f"라운드: {game.current_round}/{game.total_rounds}")
+            st.write(f"주제: {game.chosen_topic}")
+            human_player = next(p for p in game.players if p.is_human)
+            if human_player.is_liar:
+                st.write("당신은 라이어입니다!")
+            else:
+                st.write(f"제시어: {st.session_state.secret_word}")
+            
+            st.write("\n### 플레이어 점수")
             for player in game.players:
                 st.write(f"{player.name}: {player.score}점")
-        
-        # 라이어인 경우 추가 정보
-        human_player = next(p for p in game.players if p.is_human)
-        if human_player.is_liar:
-            st.write("### 라이어 정보")
-            st.write("당신은 라이어입니다!")
-            
-            # 예측 단어 표시 (tensor 값 없이)
-            if st.session_state.get('ai_predicted_words'):
-                st.write("### 시스템 예측 단어들")
-                # 상위 5개 단어만 점수 없이 표시
-                predicted_words = list(st.session_state.ai_predicted_words.keys())[:5]
-                st.write(", ".join(predicted_words))
-        else:
-            st.write(f"### 제시어: {st.session_state.secret_word}")
+
+# 예측된 단어들 처리 함수
+def process_predicted_words(predicted_dict):
+    # tensor 제거하고 단어만 추출
+    processed_words = {}
+    for word, score in predicted_dict.items():
+        # score가 tensor인 경우 float으로 변환
+        processed_score = float(score) if hasattr(score, 'item') else score
+        processed_words[word] = processed_score
+    return dict(sorted(processed_words.items(), key=lambda x: x[1], reverse=True))
 
 # 세션 상태 초기화
 if 'initialized' not in st.session_state:
@@ -51,6 +49,7 @@ if 'initialized' not in st.session_state:
     st.session_state.round_data_initialized = False
     st.session_state.initialized = True
     st.session_state.ai_predicted_words = None  # 새로 추가된 상태
+    st.session_state.start_time = None  # 타이머 시작 시간
 
 st.title("라이어 게임에 오신 것을 환영합니다!")
 
@@ -111,6 +110,19 @@ elif st.session_state.game_phase == 'role_reveal':
     st.write(f"### 라운드 {game.current_round}")
     display_game_info()
     
+    # 라이어가 인간인 경우 예측 단어 표시
+    human_player = next(p for p in game.players if p.is_human)
+    if human_player.is_liar and st.session_state.ai_predicted_words is None:
+        aggregated_comments = " ".join(st.session_state.descriptions.values())
+        st.session_state.ai_predicted_words = game.predict_secret_word_from_comments(aggregated_comments)
+        
+        # 메인 화면에 예측 단어 표시
+        if st.session_state.ai_predicted_words:
+            processed_words = process_predicted_words(st.session_state.ai_predicted_words)
+            st.write("### 시스템 예측 단어들")
+            for word, score in list(processed_words.items())[:5]:
+                st.write(f"{word}: {score:.4f}")
+    
     if st.button("설명 단계로"):
         st.session_state.game_phase = 'explanation'
         st.rerun()
@@ -123,6 +135,14 @@ elif st.session_state.game_phase == 'explanation':
     
     st.write("### 설명 단계")
     st.write("각 플레이어는 제시어에 대해 한 문장씩 설명해주세요.")
+    
+    # 라이어가 인간인 경우 예측 단어 표시
+    human_player = next(p for p in game.players if p.is_human)
+    if human_player.is_liar and st.session_state.ai_predicted_words is not None:
+        processed_words = process_predicted_words(st.session_state.ai_predicted_words)
+        st.write("### 시스템 예측 단어들")
+        for word, score in list(processed_words.items())[:5]:
+            st.write(f"{word}: {score:.4f}")
     
     # 현재까지의 설명들 표시
     if st.session_state.descriptions:
