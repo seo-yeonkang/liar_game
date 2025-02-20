@@ -119,6 +119,7 @@ elif st.session_state.game_phase == 'role_reveal':
         st.session_state.game_phase = 'explanation'
         st.rerun()
 
+
 # 설명 단계
 elif st.session_state.game_phase == 'explanation':
     game = st.session_state.game
