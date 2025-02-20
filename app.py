@@ -2,7 +2,7 @@ import streamlit as st
 from player import Player
 from liar_game import LiarGame
 import random
-from ai_utils_bert_copy import compute_secret_embeddings
+from ai_utils_bert import compute_secret_embeddings
 
 # Streamlit 페이지 설정
 st.set_page_config(page_title="라이어 게임", page_icon="🎭")
