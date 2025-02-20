@@ -108,17 +108,10 @@ elif st.session_state.game_phase == 'role_reveal':
     st.write(f"### 라운드 {game.current_round}")
     display_game_info()
     
-    # 라이어가 인간인 경우 예측 단어 표시
+    # 라이어가 인간인 경우 예측 단어 초기화
     human_player = next(p for p in game.players if p.is_human)
-    if human_player.is_liar and st.session_state.ai_predicted_words is None:
-        aggregated_comments = " ".join(st.session_state.descriptions.values())
-        st.session_state.ai_predicted_words = game.predict_secret_word_from_comments(aggregated_comments)
-        
-        # 메인 화면에 예측 단어 표시
-        if st.session_state.ai_predicted_words:
-            processed_words = process_predicted_words(st.session_state.ai_predicted_words)
-            st.write("### 시스템 예측 단어들")
-            st.write(", ".join(processed_words))
+    if human_player.is_liar:
+        st.session_state.ai_predicted_words = None
     
     if st.button("설명 단계로"):
         st.session_state.game_phase = 'explanation'
@@ -133,13 +126,6 @@ elif st.session_state.game_phase == 'explanation':
     st.write("### 설명 단계")
     st.write("각 플레이어는 제시어에 대해 한 문장씩 설명해주세요.")
     
-    # 라이어가 인간인 경우 예측 단어 표시
-    human_player = next(p for p in game.players if p.is_human)
-    if human_player.is_liar and st.session_state.ai_predicted_words is not None:
-        processed_words = process_predicted_words(st.session_state.ai_predicted_words)
-        st.write("### 시스템 예측 단어들")
-        st.write(", ".join(processed_words))
-    
     # 현재까지의 설명들 표시
     if st.session_state.descriptions:
         st.write("\n### 지금까지의 설명:")
@@ -150,6 +136,17 @@ elif st.session_state.game_phase == 'explanation':
     st.write(f"\n### {current_player.name}의 차례")
     
     if current_player.is_human:
+        # 라이어인 경우, 이전 설명들이 있다면 예측 단어 생성
+        if current_player.is_liar and st.session_state.descriptions and st.session_state.ai_predicted_words is None:
+            aggregated_comments = " ".join(st.session_state.descriptions.values())
+            st.session_state.ai_predicted_words = game.predict_secret_word_from_comments(aggregated_comments)
+            
+            # 메인 화면에 예측 단어 표시
+            if st.session_state.ai_predicted_words:
+                processed_words = process_predicted_words(st.session_state.ai_predicted_words)
+                st.write("### 시스템 예측 단어들")
+                st.write(", ".join(processed_words))
+
         if current_player.name not in st.session_state.descriptions:
             # 타이머 설정
             if st.session_state.start_time is None:
