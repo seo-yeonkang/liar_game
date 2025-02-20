@@ -122,14 +122,17 @@ elif st.session_state.game_phase == 'explanation':
             if current_player.is_liar and 'hint_shown' not in st.session_state:
                 if st.button("힌트 받기"):
                     aggregated_comments = " ".join(st.session_state.descriptions.values())
-                    predicted_word = game.predict_secret_word_from_comments(aggregated_comments)
-                    st.session_state.liar_word_prediction = predicted_word
+                    predicted_words = game.predict_secret_word_from_comments(aggregated_comments)
+                    # 예측 단어 중 상위 5개만 선택하고 tensor 부분 제거
+                    top_5_words = [word.split(',')[0].strip() for word in predicted_words.split('\n')[:5]]
+                    formatted_prediction = "예측 단어는 {'" + "','".join(top_5_words) + "'}입니다."
+                    st.session_state.liar_word_prediction = formatted_prediction
                     st.session_state.hint_shown = True
                     st.rerun()
             
             # 힌트가 있으면 표시
             if 'hint_shown' in st.session_state and st.session_state.liar_word_prediction:
-                st.write(f"힌트: 예측 단어는 '{st.session_state.liar_word_prediction}'입니다.")
+                st.write(f"힌트: {st.session_state.liar_word_prediction}")
             
             explanation = st.text_input("당신의 설명을 입력하세요")
             if st.button("설명 제출"):
