@@ -9,13 +9,13 @@ import streamlit as st
 
 
 # OpenAI API 키 설정 (본인의 API 키로 대체하세요)
-openai.api_key = st.text_input("OpenAI API 키를 입력하세요", type="password")
+api_key = st.text_input("OpenAI API 키를 입력하세요", type="password")
 
 if api_key:
     openai.api_key = api_key
-    # API 호출 로직 (채팅, 생성 등)
 else:
     st.warning("API 키를 입력해주세요. OpenAI 웹사이트에서 발급 가능합니다.")
+
     
 
 def download_models():
@@ -88,7 +88,7 @@ def gpt_generate_response(system_prompt, max_tokens=60, temperature=0.7):
     주어진 시스템 프롬프트를 사용해 GPT API를 호출하고 응답 텍스트를 생성합니다.
     실패 시 None을 반환합니다.
     """
-    client = openai.OpenAI(api_key="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")
+    client = openai.OpenAI()
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
