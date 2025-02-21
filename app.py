@@ -40,7 +40,7 @@ if 'initialized' not in st.session_state:
     st.session_state.initialized = True
     st.session_state.liar_guess_made = False
 
-st.title("🎭라이어 게임에 오신 것을 환영합니다! \n - 난 진짜 라이어 아님.")
+st.title("라이어 게임에 오신 것을 환영합니다! \n ## 난 진짜 라이어 아님.")
 
 # 게임 초기 설정
 if st.session_state.game_phase == 'setup':
