@@ -112,7 +112,7 @@ elif st.session_state.game_phase == 'explanation':
     st.write(f"주제: {game.chosen_topic}")
     if not human_player.is_liar:
         st.write(f"제시어: {st.session_state.secret_word}")
-    st.write(f"당신은 {'라이어' if human_player.is_liar else '시민'}입니다.")
+    st.write(f"당신은 {'라이어' if human_player.is_liar else '시민민'}입니다.")
     
     # 현재까지의 설명들 표시
     if st.session_state.descriptions:
