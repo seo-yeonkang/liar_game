@@ -221,7 +221,7 @@ elif st.session_state.game_phase == 'explanation':
                     aggregated_comments = " ".join(st.session_state.descriptions.values())
                     predicted_words = game.predict_secret_word_from_comments(aggregated_comments)
                     top_5_words = list(predicted_words.keys())[:5]
-                    formatted_prediction = "예측 단어는 {'" + "','".join(top_5_words) + "'}입니다."
+                    formatted_prediction = "예측 단어는 {'" + "', '".join(top_5_words) + "'}입니다."
                     st.session_state.liar_word_prediction = formatted_prediction
                     st.session_state.hint_shown = True
                     st.rerun()
