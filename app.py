@@ -191,7 +191,7 @@ elif st.session_state.game_phase == 'explanation':
             <div>역할: {human_player.is_liar and '라이어' or '시민'}</div>
         </div>
     """
-    st.markdown(info_html, unsafe_allow_html=True)
+    st.write(info_html, unsafe_allow_html=True)
     
     # 현재까지의 설명들 표시 (수정된 부분)
     if st.session_state.descriptions:
