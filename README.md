@@ -7,7 +7,7 @@
 
 1. 저장소 클론
 ```bash
-Copygit clone https://github.com/your-username/liar-game.git
+Copygit clone https://github.com/seo-yeonkang/liar_game
 cd liar-game
 ```
 2. 가상환경 생성 및 활성화
