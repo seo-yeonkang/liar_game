@@ -10,12 +10,12 @@
 
 1. 저장소 클론
 ```bash
-Copygit clone https://github.com/seo-yeonkang/liar_game
+git clone https://github.com/seo-yeonkang/liar_game
 cd liar-game
 ```
 2. 가상환경 생성 및 활성화
 ```bash
-Copypython -m venv venv
+python -m venv venv
 # Windows
 venv\Scripts\activate
 # macOS/Linux
@@ -23,11 +23,11 @@ source venv/bin/activate
 ```
 3. 필요한 패키지 설치
 ```bash
-Copypip install -r requirements.txt
+pip install -r requirements.txt
 ```
 4. 게임 실행
 ```bash
-Copystreamlit run app.py
+streamlit run app.py
 ```
 
 ### OpenAI API 키 입력
