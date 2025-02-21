@@ -7,6 +7,7 @@ from ai_utils_bert import compute_secret_embeddings
 # Streamlit 페이지 설정
 st.set_page_config(page_title="라이어 게임", page_icon="🎭")
 
+# 스타일 추가
 st.markdown("""
     <style>
     /* 메인 박스 스타일 */
@@ -79,7 +80,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 게임 정보 표시 함수 정의
+# 게임 정보 표시 함수 정의 
 def display_game_info():
     game = st.session_state.game
     if game and hasattr(game, 'chosen_topic'):
@@ -179,18 +180,30 @@ elif st.session_state.game_phase == 'explanation':
     st.write("### 설명 단계")
     st.write("각 플레이어는 제시어에 대해 한 문장씩 설명해주세요.")
     
-    # 메인 화면에 게임 정보 표시
+    # 메인 화면에 게임 정보 표시 (수정된 부분)
     human_player = next(p for p in game.players if p.is_human)
-    st.write(f"주제: {game.chosen_topic}")
-    if not human_player.is_liar:
-        st.write(f"제시어: {st.session_state.secret_word}")
-    st.write(f"당신은 {'라이어' if human_player.is_liar else '시민'}입니다.")
+    role_style = "liar-theme" if human_player.is_liar else "citizen-theme"
+    info_html = f"""
+        <div class="player-info-box {role_style}">
+            <div class="player-name">{human_player.name}님의 게임 정보</div>
+            <div>주제: {game.chosen_topic}</div>
+            {'<div>제시어: ' + st.session_state.secret_word + '</div>' if not human_player.is_liar else ''}
+            <div>역할: {'라이어' if human_player.is_liar else '시민'}</div>
+        </div>
+    """
+    st.markdown(info_html, unsafe_allow_html=True)
     
-    # 현재까지의 설명들 표시
+    # 현재까지의 설명들 표시 (수정된 부분)
     if st.session_state.descriptions:
         st.write("\n### 지금까지의 설명:")
         for name, desc in st.session_state.descriptions.items():
-            st.write(f"{name}: {desc}")
+            desc_html = f"""
+                <div class="player-info-box">
+                    <div class="player-name">{name}</div>
+                    <div class="description-box">{desc}</div>
+                </div>
+            """
+            st.markdown(desc_html, unsafe_allow_html=True)
     
     # 현재 플레이어의 설명 처리
     st.write(f"\n### {current_player.name}의 차례")
@@ -202,16 +215,21 @@ elif st.session_state.game_phase == 'explanation':
                 if st.button("힌트 받기"):
                     aggregated_comments = " ".join(st.session_state.descriptions.values())
                     predicted_words = game.predict_secret_word_from_comments(aggregated_comments)
-                    # 딕셔너리의 키(단어)들을 리스트로 변환하고 상위 5개 선택
                     top_5_words = list(predicted_words.keys())[:5]
                     formatted_prediction = "예측 단어는 {'" + "','".join(top_5_words) + "'}입니다."
                     st.session_state.liar_word_prediction = formatted_prediction
                     st.session_state.hint_shown = True
                     st.rerun()
             
-            # 힌트가 있으면 표시
+            # 힌트가 있으면 표시 (수정된 부분)
             if 'hint_shown' in st.session_state and st.session_state.liar_word_prediction:
-                st.write(f"힌트: {st.session_state.liar_word_prediction}")
+                hint_html = f"""
+                    <div class="hint-box">
+                        <h4>🎯 힌트</h4>
+                        <p>{st.session_state.liar_word_prediction}</p>
+                    </div>
+                """
+                st.markdown(hint_html, unsafe_allow_html=True)
             
             explanation = st.text_input("당신의 설명을 입력하세요")
             if st.button("설명 제출"):
