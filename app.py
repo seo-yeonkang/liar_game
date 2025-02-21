@@ -173,42 +173,32 @@ elif st.session_state.game_phase == 'role_reveal':
 
 # 설명 단계
 elif st.session_state.game_phase == 'explanation':
-    game = st.session_state.game
-    display_game_info()
-    current_player = st.session_state.players_order[st.session_state.current_player_idx]
-    
-    st.write("### 설명 단계")
-    st.write("각 플레이어는 제시어에 대해 한 문장씩 설명해주세요.")
-    
-    # 메인 화면에 게임 정보 표시
-    human_player = next(p for p in game.players if p.is_human)
-    role_style = "liar-theme" if human_player.is_liar else "citizen-theme"
-    info_html = f"""
-        <div class="player-info-box {role_style}">
-            <div class="player-name">{human_player.name}님의 게임 정보</div>
-            <div>주제: {game.chosen_topic}</div>
-    """
-    
-    if not human_player.is_liar:
-        info_html += f"<div>제시어: {st.session_state.secret_word}</div>"
-        
-    info_html += f"""
-            <div>역할: {'라이어' if human_player.is_liar else '시민'}</div>
-        </div>
-    """
-    st.markdown(info_html, unsafe_allow_html=True)
-    
-    # 현재까지의 설명들 표시 
-    if st.session_state.descriptions:
-        st.write("\n### 지금까지의 설명:")
-        for name, desc in st.session_state.descriptions.items():
-            desc_html = f"""
-                <div class="player-info-box">
-                    <div class="player-name">{name}</div>
-                    <div class="description-box">{desc}</div>
-                </div>
-            """
-            st.markdown(desc_html, unsafe_allow_html=True)
+   game = st.session_state.game
+   display_game_info()
+   current_player = st.session_state.players_order[st.session_state.current_player_idx]
+   
+   st.write("### 설명 단계")
+   st.write("각 플레이어는 제시어에 대해 한 문장씩 설명해주세요.")
+   
+   # 메인 화면에 게임 정보 표시
+   human_player = next(p for p in game.players if p.is_human)
+   if human_player.is_liar:
+       st.markdown(f"""
+           <div class="player-info-box liar-theme">
+               <div class="player-name">{human_player.name}님의 게임 정보</div>
+               <div>주제: {game.chosen_topic}</div>
+               <div>역할: 라이어</div>
+           </div>
+       """, unsafe_allow_html=True)
+   else:
+       st.markdown(f"""
+           <div class="player-info-box citizen-theme">
+               <div class="player-name">{human_player.name}님의 게임 정보</div>
+               <div>주제: {game.chosen_topic}</div>
+               <div>제시어: {st.session_state.secret_word}</div>
+               <div>역할: 시민</div>
+           </div>
+       """, unsafe_allow_html=True)
     
     # 현재 플레이어의 설명 처리
     st.write(f"\n### {current_player.name}의 차례")
