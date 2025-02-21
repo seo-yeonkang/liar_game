@@ -43,9 +43,9 @@ API 키는 비밀번호 형태로 안전하게 처리됩니다
 4. "게임 시작" 버튼을 클릭하여 게임을 시작합니다!
 
 ## 기술 스택
-Python
-Streamlit
-OpenAI GPT
-BERT (Bidirectional Encoder Representations from Transformers)
-Sentence Transformers
-PyTorch
+- Python
+- Streamlit
+- OpenAI GPT
+- BERT (Bidirectional Encoder Representations from Transformers)
+- Sentence Transformers
+- PyTorch
