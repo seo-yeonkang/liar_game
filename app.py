@@ -3,8 +3,6 @@ from player import Player
 from liar_game import LiarGame
 import random
 from ai_utils_bert import compute_secret_embeddings
-import openai
-import ai_utils_bert
 
 
 # Streamlit 페이지 설정
