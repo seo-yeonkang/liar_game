@@ -303,19 +303,19 @@ elif st.session_state.game_phase == 'result':
                     player.score += 1
             
             if game.liar.is_human:
-                if 'liar_guess_made' not in st.session_state:
-                    liar_guess = st.text_input("라이어가 되셨네요! 제시어를 맞춰보세요:")
-                    if st.button("제출"):
-                        st.session_state.liar_guess = liar_guess
-                        st.session_state.liar_guess_made = True
-                        st.rerun()
-                else:
+                st.write("라이어가 되셨네요! 제시어를 맞춰보세요.")
+                liar_guess = st.text_input("제시어는 무엇인가요?")
+                if st.button("제출"):
+                    # 제시어 확인
                     st.write(f"실제 제시어는 '{st.session_state.secret_word}'였습니다!")
-                    if st.session_state.liar_guess.lower() == st.session_state.secret_word.lower():
+                    if liar_guess.lower() == st.session_state.secret_word.lower():
                         game.liar.score += 3
                         st.write("정답입니다! 3점을 획득하셨습니다!")
                     else:
                         st.write("틀렸습니다.")
+                    
+                    # 점수 계산 완료 표시
+                    st.session_state.points_calculated = True
             else:
                 st.write(f"실제 라이어는 {game.liar.name}입니다!")
                 st.write(f"제시어는 '{st.session_state.secret_word}'였습니다!")
@@ -325,34 +325,35 @@ elif st.session_state.game_phase == 'result':
                     st.write(f"{game.liar.name}이(가) 제시어를 맞추어 3점을 획득했습니다!")
                 else:
                     st.write(f"{game.liar.name}이(가) 제시어를 맞추지 못했습니다.")
+                
+                # 점수 계산 완료 표시
+                st.session_state.points_calculated = True
         else:
             st.write(f"실제 라이어는 {game.liar.name}입니다!")
             st.write(f"제시어는 '{st.session_state.secret_word}'였습니다!")
             game.liar.score += 1
             st.write(f"라이어가 지목되지 않아 {game.liar.name}이(가) 1점을 획득했습니다!")
-        
-        st.session_state.points_calculated = True
+            
+            # 점수 계산 완료 표시
+            st.session_state.points_calculated = True
 
-    if st.button("다음 라운드"):
-        # 라운드 관련 상태 초기화
-        game.current_round += 1
-        st.session_state.descriptions = {}
-        st.session_state.votes = {}
-        st.session_state.current_player_idx = 0
-        st.session_state.round_data_initialized = False
-        st.session_state.liar_word_prediction = None
-        if 'hint_shown' in st.session_state:
-            del st.session_state.hint_shown
-        if 'points_calculated' in st.session_state:
-            del st.session_state.points_calculated
-        if 'liar_guess_made' in st.session_state:
-            del st.session_state.liar_guess_made
-        
-        if game.current_round <= game.total_rounds:
-            st.session_state.game_phase = 'role_reveal'
-        else:
-            st.session_state.game_phase = 'game_over'
-        st.rerun()
+    # 다음 라운드로 진행 버튼
+    if 'points_calculated' in st.session_state:
+        if st.button("다음 라운드"):
+            # 라운드 관련 상태 초기화
+            game.current_round += 1
+            st.session_state.descriptions = {}
+            st.session_state.votes = {}
+            st.session_state.current_player_idx = 0
+            st.session_state.round_data_initialized = False
+            if 'points_calculated' in st.session_state:
+                del st.session_state.points_calculated
+            
+            if game.current_round <= game.total_rounds:
+                st.session_state.game_phase = 'role_reveal'
+            else:
+                st.session_state.game_phase = 'game_over'
+            st.rerun()
 
 # 게임 종료
 elif st.session_state.game_phase == 'game_over':
