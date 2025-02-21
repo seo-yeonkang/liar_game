@@ -82,14 +82,14 @@ class LiarGame:
         # 딕셔너리로 유사도 저장
         word_dict={}
 
-        # 각 주제에 맞는 기존 embedding 값을 가져오기 위한 작업업
+        # 각 주제에 맞는 기존 embedding 값을 가져오기 위한 작업
         attribute_name=f"{self.chosen_topic}_word_embeddings" # 문자열 생성
         get_self=getattr(self,attribute_name) # 동적으로 객체의 속성을 가져옴
 
         for word, emb in get_self.items():
             similarity = util.cos_sim(comment_embedding, emb)
             
-            # 모델 평가를 위해 딕셔러니로 유사도를 저장장 
+            # 모델 평가를 위해 딕셔러니로 유사도를 저장
             word_dict[word]=similarity
 
         # 유사도를 저장한 딕셔너리를 value값(유사도)에 따라 정렬
@@ -148,9 +148,9 @@ class LiarGame:
         실제 제시어 단서는 주지 않고 일반적인 설명을 생성하도록 합니다.
         """
         if previous_comments.strip():
-            # return 값이 단일 단어에서, 모든 코사인 유사도 값을 가지는 딕셔너리로 바뀜뀜
+            # return 값이 단일 단어에서, 모든 코사인 유사도 값을 가지는 딕셔너리로 바뀜
             predicted_dict = self.predict_secret_word_from_comments(previous_comments)
-            #가장 유사도가 높은 단어를 추출출
+            #가장 유사도가 높은 단어를 추출
             predicted_secret=list(predicted_dict.keys())[0]
 
             system_prompt = (
@@ -175,6 +175,7 @@ class LiarGame:
                 "최대한 플레이어들에게 들키지 않도록 자연스럽게 작성하세요."
                 "한 문장으로 설명을 작성하세요."
             )
+            predicted_dict = {} 
         description = gpt_generate_response(system_prompt)
         return description if description else "설명을 생성하는 데 실패했습니다.", predicted_dict
 
@@ -185,63 +186,8 @@ class LiarGame:
     MODEL_PATH = "./trained_model"  # 학습한 모델이 저장된 폴더 경로
     tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
-    '''
-    def get_embedding(self, sentence):
-        """
-        단일 문장의 임베딩을 생성하는 함수.
-        여기서는 CLS 토큰의 임베딩을 사용합니다.
-        """
-        inputs = self.tokenizer(sentence, return_tensors="pt", truncation=True, 
-                                padding="max_length", max_length=128)
-        with torch.no_grad():
-            # 만약 모델이 roberta 기반이면, 내부의 roberta 모듈을 사용합니다.
-            if hasattr(self.model, "roberta"):
-                outputs = self.model.roberta(**inputs, output_hidden_states=True)
-            # 만약 BERT 기반이면, 내부의 bert 모듈을 사용합니다.
-            elif hasattr(self.model, "bert"):
-                outputs = self.model.bert(**inputs, output_hidden_states=True)
-            else:
-                # 만약 다른 구조라면 fallback (하지만 이 경우에는 추가 조정 필요)
-                outputs = self.model(**inputs)
-        return outputs.last_hidden_state[:, 0, :].numpy().flatten()
-    
-    def generate_ai_vote(self, voter, descriptions):
-        """
-        AI 플레이어가 라이어로 의심되는 사람에게 투표하는 로직.
-        기존에는 후보들의 모든 pairwise 유사도를 계산했지만,
-        여기서는 후보(자신 제외) 각 플레이어의 설명 임베딩과, 
-        나머지 후보들의 평균 임베딩과의 코사인 거리를 계산합니다.
-        거리가 클수록 집단 평균과 동떨어져 있으므로 의심받을 확률이 높습니다.
-        """
-        # 자신을 제외한 후보 리스트
-        candidate_names = [name for name in descriptions if name != voter.name]
-    
-        # 각 후보의 설명 임베딩 계산
-        candidate_embeddings = {}
-        for name in candidate_names:
-            candidate_embeddings[name] = self.get_embedding(descriptions[name])
-    
-        suspicion_scores = {}
-        for name in candidate_names:
-            # 나머지 후보들의 임베딩을 모아서 평균 임베딩 계산
-            other_embeddings = [candidate_embeddings[other] for other in candidate_names if other != name]
-            if other_embeddings:
-                avg_embedding = np.mean(other_embeddings, axis=0)
-            else:
-                avg_embedding = candidate_embeddings[name]
-            # 코사인 거리는 값이 클수록 두 벡터 간 차이가 큼 (즉, 후보가 집단 평균과 동떨어짐)
-            distance = cosine(candidate_embeddings[name], avg_embedding)
-            suspicion_scores[name] = distance
-    
-        print("Suspicion scores:", suspicion_scores)
 
-        # 선택: 거리가 클수록 의심받을 확률이 높으므로, softmax 적용 (여기서는 단순하게 거리값 사용)
-        scores_tensor = torch.tensor(list(suspicion_scores.values()))
-        probs = torch.nn.functional.softmax(scores_tensor, dim=0).tolist()
-        chosen_candidate = random.choices(candidate_names, weights=probs, k=1)[0]
     
-        return chosen_candidate
-    '''
     def compute_sts_similarity(self, sentence1, sentence2):
         """
         두 문장의 의미적 유사도를 평가하는 함수 (KLUE RoBERTa 활용)
@@ -348,7 +294,7 @@ class LiarGame:
         # 각 플레이어의 설명 수집
         print("\n각 플레이어는 제시어에 대해 한 문장씩 설명해주세요.")
         descriptions = {}
-        predicted_dict= {} # 단어들의 코사인 유사도가 포함함
+        predicted_dict= {} # 단어들의 코사인 유사도가 포함
         
         skip_model_evaluate=0
 
