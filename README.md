@@ -11,7 +11,7 @@
 1. 저장소 클론
 ```bash
 git clone https://github.com/seo-yeonkang/liar_game
-cd liar-game
+cd liar_game
 ```
 2. 가상환경 생성 및 활성화
 ```bash
