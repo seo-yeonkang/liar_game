@@ -186,9 +186,9 @@ elif st.session_state.game_phase == 'explanation':
     info_html = f"""
         <div class="player-info-box {role_style}">
             <div class="player-name">{human_player.name}님의 게임 정보</div>
+            <div>역할: {human_player.is_liar and '라이어' or '시민'}</div>
             <div>주제: {game.chosen_topic}</div>
             {'<div>제시어: ' + st.session_state.secret_word + '</div>' if not human_player.is_liar else ''}
-            <div>역할: {human_player.is_liar and '라이어' or '시민'}</div>
         </div>
     """
     st.write(info_html, unsafe_allow_html=True)
