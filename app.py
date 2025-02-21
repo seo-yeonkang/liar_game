@@ -107,6 +107,13 @@ elif st.session_state.game_phase == 'explanation':
     st.write("### 설명 단계")
     st.write("각 플레이어는 제시어에 대해 한 문장씩 설명해주세요.")
     
+    # 메인 화면에 게임 정보 표시
+    human_player = next(p for p in game.players if p.is_human)
+    st.write(f"주제: {game.chosen_topic}")
+    if not human_player.is_liar:
+        st.write(f"제시어: {st.session_state.secret_word}")
+    st.write(f"당신은 {'라이어' if human_player.is_liar else '시민'}입니다.")
+    
     # 현재까지의 설명들 표시
     if st.session_state.descriptions:
         st.write("\n### 지금까지의 설명:")
