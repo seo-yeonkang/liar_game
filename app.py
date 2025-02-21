@@ -7,6 +7,78 @@ from ai_utils_bert import compute_secret_embeddings
 # Streamlit 페이지 설정
 st.set_page_config(page_title="라이어 게임", page_icon="🎭")
 
+st.markdown("""
+    <style>
+    /* 메인 박스 스타일 */
+    .player-info-box {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 10px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .player-info-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    /* 역할별 테마 */
+    .liar-theme {
+        border-left: 5px solid #ef5350;
+    }
+    .citizen-theme {
+        border-left: 5px solid #66bb6a;
+    }
+
+    /* 플레이어 이름 */
+    .player-name {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #333;
+    }
+
+    /* 설명 박스 */
+    .description-box {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+
+    /* 힌트 박스 */
+    .hint-box {
+        background-color: #fff3e0;
+        padding: 15px;
+        border-radius: 8px;
+        border: 2px dashed #ffa726;
+        margin: 10px 0;
+        animation: shine 2s infinite;
+    }
+    @keyframes shine {
+        0% { box-shadow: 0 0 5px rgba(255, 167, 38, 0.2); }
+        50% { box-shadow: 0 0 20px rgba(255, 167, 38, 0.5); }
+        100% { box-shadow: 0 0 5px rgba(255, 167, 38, 0.2); }
+    }
+
+    /* 게임 페이즈 전환 */
+    .phase-transition {
+        animation: fadeIn 0.5s ease-out;
+    }
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # 게임 정보 표시 함수 정의
 def display_game_info():
     game = st.session_state.game
