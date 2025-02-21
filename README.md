@@ -1,7 +1,7 @@
-# liar_game
+# 🃏 liar_game
 
 ## 소개
-이 프로젝트는  '라이어 게임'을 웹 기반으로 구현한 애플리케이션입니다. 플레이어가 AI가 함께 즐길 수 있는 대화형 게임으로, Streamlit을 사용하여 개발되었습니다.
+이 프로젝트는 '라이어 게임'을 웹 기반으로 구현한 애플리케이션입니다. 플레이어가 AI와 함께 즐길 수 있는 대화형 게임으로, Streamlit을 사용하여 개발되었습니다.
 
 ## 웹 플레이
 🎮 [라이어 게임 플레이하기](https://kubig-nlpteam1-liargame.streamlit.app/)
@@ -25,15 +25,18 @@ source venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
-4. 게임 실행
+4️. OpenAI API 키 설정
+- OpenAI API를 사용하려면 환경 변수로 API 키를 설정해야 합니다.
+```bash
+# Windows (PowerShell)
+$env:OPENAI_API_KEY="your_api_key_here"
+# macOS/Linux (터미널)
+export OPENAI_API_KEY="your_api_key_here"
+```
+5. 게임 실행
 ```bash
 streamlit run app.py
 ```
-
-### OpenAI API 키 입력
--게임 실행 후 화면에서 OpenAI API 키를 입력하세요.
--API 키는 비밀번호 형태로 안전하게 처리됩니다.
--게임 세션이 종료되면 API 키를 다시 입력해야 합니다.
 
 
 
