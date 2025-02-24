@@ -121,6 +121,15 @@ if 'initialized' not in st.session_state:
 
 st.title("라이어 게임에 오신 것을 환영합니다! \n  ##### 🎭 난 진짜 라이어 아님. | Team 장어구이")
 
+if 'game_phase' not in st.session_state:
+    st.session_state.game_phase = 'setup'
+
+if 'game' not in st.session_state:
+    st.session_state.game = None
+
+if 'button_clicked' not in st.session_state:
+    st.session_state.button_clicked = False
+
 # 게임 초기 설정
 if st.session_state.game_phase == 'setup':
     total_players = st.number_input("총 플레이어 수를 입력하세요 (최소 3명)", min_value=3, value=3)
@@ -141,10 +150,11 @@ if st.session_state.game_phase == 'setup':
             execution_time = time.time() - start_time
             time.sleep(execution_time)  # 실제 실행 시간만큼 유지
 
-        st.success("✅ 게임이 시작되었습니다!")
 
         st.session_state.game_phase = 'role_reveal'
-        st.rerun()
+        st.toast("✅ 게임이 시작되었습니다!")  # 피드백 제공
+
+        st.rerun()  # 페이지 새로고침
 
 # 역할 공개 및 라운드 시작
 elif st.session_state.game_phase == 'role_reveal':
